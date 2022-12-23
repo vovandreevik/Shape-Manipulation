@@ -4,17 +4,14 @@
 #include "Rectangle.h"
 #include "CompositeShape.h"
 
+
 void sort(Shape** mass, int size);
-
 void moveNewCentre(Shape* shape, float x, float y);
-
 void isotropicScale(Shape* shape, float posX, float posY, float k);
-
-Rectangle* readRect(std::ifstream& in);
-
+Rectangle* newRect(std::ifstream& in);
 void moveMass(Shape** mass, int count, std::ifstream& in);
-
 void scaleMass(Shape** mass, int count, std::ifstream& in);
+
 
 int main()
 {
@@ -22,12 +19,12 @@ int main()
 	std::string inputFile;
 	std::cin >> inputFile;
 
-	std::ifstream in;
+	std::ifstream input;
 
 	try {
-		in.open(inputFile);
-		if (!in) {
-			throw std::runtime_error("no such file or directory");
+		input.open(inputFile);
+		if (!input) {
+			throw std::runtime_error("It is impossible to open the file");
 		}
 	}
 	catch (std::exception const& e) {
@@ -38,26 +35,24 @@ int main()
 	int count = 0;
 	int size = 0;
 	std::string name;
-
 	CompositeShape complex;
 	std::string type;
+	Shape** mass = new Shape * [100];
 
-	Shape** mass = new Shape * [50];
-
-	while (!in.eof()) {
-		in >> type;
+	while (!input.eof()) {
+		input >> type;
 		if (type == "COMPLEX") {
-			in >> size;
+			input >> size;
 			for (int i = 0; i < size; i++) {
-				in >> name;
+				input >> name;
 				if (name == "RECTANGLE") {
-					Shape* shape = readRect(in);
+					Shape* shape = newRect(input);
 					if (shape != NULL) {
 						complex.addShape(shape);
 					}
 				}
 				else {
-					in.ignore(100, '\n');
+					input.ignore(100, '\n');
 				}
 			}
 			mass[count] = &complex;
@@ -65,44 +60,57 @@ int main()
 			
 		}
 		else if (type == "RECTANGLE") {
-			Shape* shape = readRect(in);
+			Shape* shape = newRect(input);
 			if (shape != NULL) {
 				mass[count] = shape->clone();
 				count++;
 			}
 		}
 		else if (type == "MOVE") {
-			moveMass(mass, count, in);
+			moveMass(mass, count, input);
 		}
 		else if (type == "SCALE") {
-			scaleMass(mass, count, in);
+			scaleMass(mass, count, input);
 		}
 		else {
-			in.ignore(100, '\n');
+			input.ignore(100, '\n');
 		}
 	}
 
 	sort(mass, count);
 
-	std::cout << "SHAPES AFTER SORTING: \n";
+	std::cout << "Sorted shapes: \n";
 	for (int i = 0; i < count; i++) {
 		std::cout << *(mass[i]) << '\n';
 	}
-
 	delete[] mass;
-	in.close();
+	input.close();
+
 	return 0;
 }
 
-Rectangle* readRect(std::ifstream& in) {
+
+Rectangle* newRect(std::ifstream& input) {
 	float leftX = 0.0, leftY = 0.0, rightX = 0.0, rightY = 0.0;
-	in >> leftX >> leftY >> rightX >> rightY;
-	if (rightX <= leftX or rightX <= leftY) {
+	input >> leftX >> leftY >> rightX >> rightY;
+	if (rightX <= leftX or rightX <= leftY){
 		std::cerr << "Errors in the description of figures! (RECTANGLE is not accepted) \n";
 		return NULL;
 	}
-	Rectangle rectangle(leftX, leftY, rightX, rightY);
-	return &rectangle;
+	else {
+		Rectangle rectangle(leftX, leftY, rightX, rightY);
+		return &rectangle;
+	}
+	
+}
+
+void moveMass(Shape** mass, int count, std::ifstream& input) {
+	float x = 0.0;
+	float y = 0.0;
+	input >> x >> y;
+	for (int i = 0; i < count; i++) {
+		moveNewCentre(mass[i], x, y);
+	}
 }
 
 void moveNewCentre(Shape* shape, float x, float y) {
@@ -112,12 +120,11 @@ void moveNewCentre(Shape* shape, float x, float y) {
 	shape->move(newCentre);
 }
 
-void moveMass(Shape** mass, int count, std::ifstream& in) {
-	float x = 0.0;
-	float y = 0.0;
-	in >> x >> y;
+void scaleMass(Shape** mass, int count, std::ifstream& input) {
+	float posX, posY, k;
+	input >> posX >> posY >> k;
 	for (int i = 0; i < count; i++) {
-		moveNewCentre(mass[i], x, y);
+		isotropicScale(mass[i], posX, posY, k);
 	}
 }
 
@@ -125,10 +132,7 @@ void isotropicScale(Shape* shape, float posX, float posY, float k) {
 	point_t a1{};
 	a1.x = shape->getFrameRect().pos.x + shape->getFrameRect().width / 2;
 	a1.y = shape->getFrameRect().pos.y + shape->getFrameRect().height / 2;
-	point_t isotropicCenter{};
-	isotropicCenter.x = posX;
-	isotropicCenter.y = posY;
-	shape->move(isotropicCenter);
+	moveNewCentre(shape, posX, posY);
 	point_t a2{};
 	a2.x = shape->getFrameRect().pos.x + shape->getFrameRect().width / 2;
 	a2.y = shape->getFrameRect().pos.y + shape->getFrameRect().height / 2;
@@ -140,15 +144,7 @@ void isotropicScale(Shape* shape, float posX, float posY, float k) {
 	point_t newCentre{};
 	newCentre.x = posX + x;
 	newCentre.y = posY + y;
-	shape->move(newCentre);
-}
-
-void scaleMass(Shape** mass, int count, std::ifstream& in) {
-	float posX, posY, k;
-	in >> posX >> posY >> k;
-	for (int i = 0; i < count; i++) {
-		isotropicScale(mass[i], posX, posY, k);
-	}
+	moveNewCentre(shape, newCentre.x, newCentre.y);
 }
 
 void sort(Shape** mass, int size) {
