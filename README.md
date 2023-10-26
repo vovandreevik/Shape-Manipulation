@@ -7,7 +7,9 @@ This C++ program is designed to work with various shapes, including rectangles a
 ## Usage
 The program reads shape descriptions from an input file, including rectangles and composite shapes.
 
-The program sorts the shapes by their area and displays the sorted results.
+You can perform operations like moving and scaling on the shapes as specified in the input file.
+
+The program then sorts the shapes by their area and displays the sorted results.
 
 Invalid or unsupported shape descriptions are ignored.
 
